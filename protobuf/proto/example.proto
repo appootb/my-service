@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package example;
+
+import "appootb/api/websocket.proto";
+import "appootb/permission/method.proto";
+import "appootb/permission/service.proto";
+import "appootb/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "go/example";
+
+message Token {
+  string token = 1;
+}
+
+message UpStream {
+  string message = 1 [
+    (appootb.validate.rules).string = {
+      min_bytes: 1,
+      max_bytes: 31,
+    }
+  ];
+}
+
+message DownStream {
+  string message = 1;
+}
+
+service MyService {
+  option (appootb.permission.service.visible) = CLIENT;
+  
+  rpc Login(google.protobuf.Empty) returns (Token) {
+    option (google.api.http) = {
+      post: "/my-service/v1/login"
+      body: "*"
+    };
+  }
+
+  rpc Stream(stream google.protobuf.Empty) returns (stream DownStream) {
+    option (appootb.permission.method.required) = LOGGED_IN;
+
+    option (appootb.api.websocket) = {
+      url: "/my-service/v1/streaming"
+    };
+  }
+}
